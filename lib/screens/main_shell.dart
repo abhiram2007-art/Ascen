@@ -5,7 +5,6 @@ import '../providers/player_provider.dart';
 import '../providers/quest_provider.dart';
 import 'home/home_screen.dart';
 
-import 'progress/progress_screen.dart';
 import 'ai_coach/ai_coach_screen.dart';
 import 'profile/profile_screen.dart';
 import 'quests/quests_screen.dart';

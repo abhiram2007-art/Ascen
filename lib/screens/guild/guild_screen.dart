@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/guild_provider.dart';
@@ -119,16 +120,55 @@ class _GuildScreenState extends State<GuildScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               onPressed: () {
-                // To do: Show join guild dialog
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Join Guild feature coming soon! (Search by ID)')),
-                );
+                _showJoinGuildDialog(context, guildProvider, userId);
               },
               child: Text(
-                'JOIN GUILD (Coming Soon)',
+                'JOIN GUILD',
                 style: GoogleFonts.orbitron(color: AppColors.gold, fontWeight: FontWeight.bold),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showJoinGuildDialog(BuildContext context, GuildProvider guildProvider, String userId) {
+    final TextEditingController joinIdController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.systemPanel,
+        title: Text('JOIN GUILD', style: GoogleFonts.orbitron(color: AppColors.gold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Enter the Guild ID to join.', style: GoogleFonts.rajdhani(color: Colors.white70)),
+            const SizedBox(height: 16),
+            _buildTextField('Guild ID', joinIdController),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL', style: TextStyle(color: Colors.white70)),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (joinIdController.text.isNotEmpty) {
+                Navigator.pop(context);
+                try {
+                  await guildProvider.joinGuild(joinIdController.text.trim(), userId);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to join guild: $e')),
+                    );
+                  }
+                }
+              }
+            },
+            child: const Text('JOIN', style: TextStyle(color: AppColors.gold)),
           ),
         ],
       ),
@@ -173,6 +213,12 @@ class _GuildScreenState extends State<GuildScreen> {
                   style: GoogleFonts.rajdhani(color: Colors.white70, fontSize: 16),
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: 16),
+                SelectableText(
+                  'Guild ID: ${guild.id}',
+                  style: GoogleFonts.rajdhani(color: Colors.white54, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
           ),
@@ -185,7 +231,6 @@ class _GuildScreenState extends State<GuildScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          // We don't fetch full members here to keep it simple, just count
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -195,13 +240,26 @@ class _GuildScreenState extends State<GuildScreen> {
               final isMe = memberId == userId;
               final isLeader = memberId == guild.leaderId;
               
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: isLeader ? AppColors.gold.withOpacity(0.2) : Colors.white12,
-                  child: Icon(isLeader ? Icons.star : Icons.person, color: isLeader ? AppColors.gold : Colors.white),
-                ),
-                title: Text(isMe ? 'You' : 'Member $memberId', style: const TextStyle(color: Colors.white)),
-                subtitle: Text(isLeader ? 'Guild Master' : 'Hunter', style: const TextStyle(color: Colors.white54)),
+              return FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance.collection('users').doc(memberId).get(),
+                builder: (context, snapshot) {
+                  String name = isMe ? 'You' : 'Member $memberId';
+                  if (snapshot.hasData && snapshot.data!.exists) {
+                    final data = snapshot.data!.data() as Map<String, dynamic>?;
+                    if (data != null && data.containsKey('name')) {
+                      name = isMe ? 'You (${data['name']})' : data['name'];
+                    }
+                  }
+                  
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: isLeader ? AppColors.gold.withOpacity(0.2) : Colors.white12,
+                      child: Icon(isLeader ? Icons.star : Icons.person, color: isLeader ? AppColors.gold : Colors.white),
+                    ),
+                    title: Text(name, style: const TextStyle(color: Colors.white)),
+                    subtitle: Text(isLeader ? 'Guild Master' : 'Hunter', style: const TextStyle(color: Colors.white54)),
+                  );
+                },
               );
             },
           ),

@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'firebase_options.dart';
 import 'app.dart';
-import 'providers/auth_provider.dart';
-import 'providers/player_provider.dart';
-import 'providers/quest_provider.dart';
 import 'services/notification_service.dart';
 
 void main() async {
@@ -23,18 +20,12 @@ void main() async {
     debugPrint("Could not load .env file: $e");
   }
 
-  await NotificationService().init();
-  await NotificationService().requestPermissions();
-  await NotificationService().scheduleDailyQuestReminder();
+  // Only init notifications on mobile (not web)
+  if (!kIsWeb) {
+    await NotificationService().init();
+    await NotificationService().requestPermissions();
+    await NotificationService().scheduleDailyQuestReminder();
+  }
   
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => PlayerProvider()),
-        ChangeNotifierProvider(create: (_) => QuestProvider()),
-      ],
-      child: const AscendApp(),
-    ),
-  );
+  runApp(const AscendApp());
 }

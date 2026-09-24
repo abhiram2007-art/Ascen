@@ -23,6 +23,7 @@ class _AddQuestScreenState extends State<AddQuestScreen> {
   int _selectedDifficulty = 1; // 1 to 5
   String _selectedStat = 'Strength';
   DateTime? _dueDate;
+  bool _isRecurring = false;
   bool _isLoading = false;
 
   final List<String> _questTypes = ['Daily', 'Main', 'Side', 'Habit', 'Challenge'];
@@ -78,6 +79,7 @@ class _AddQuestScreenState extends State<AddQuestScreen> {
           xpReward: diffEnum.xpReward,
           createdAt: DateTime.now(),
           dueDate: _dueDate,
+          isRecurring: _isRecurring,
         );
         
         await questProvider.createQuest(userId, newQuest);
@@ -164,6 +166,35 @@ class _AddQuestScreenState extends State<AddQuestScreen> {
                           decoration: _inputDecoration('Stat Type'),
                           items: _stats.map((stat) => DropdownMenuItem(value: stat, child: Text(stat))).toList(),
                           onChanged: (value) => setState(() => _selectedStat = value!),
+                        ),
+                        const SizedBox(height: 16),
+                        SwitchListTile(
+                          title: const Text('Recurring Daily Quest', style: TextStyle(color: Colors.white)),
+                          activeColor: const Color(0xFF00D4FF),
+                          value: _isRecurring,
+                          onChanged: (value) => setState(() => _isRecurring = value),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        const SizedBox(height: 16),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Due Date', style: TextStyle(color: Colors.white54)),
+                          subtitle: Text(
+                            _dueDate != null ? '${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}' : 'Not set',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          trailing: const Icon(Icons.calendar_today, color: Color(0xFF00D4FF)),
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: _dueDate ?? DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (date != null) {
+                              setState(() => _dueDate = date);
+                            }
+                          },
                         ),
                       ],
                     ),

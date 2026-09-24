@@ -48,6 +48,9 @@ class GuildProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await _guildService.joinGuild(guildId, userId);
+    } catch (e) {
+      debugPrint('Error joining guild: $e');
+      rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();

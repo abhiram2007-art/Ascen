@@ -17,6 +17,9 @@ import 'screens/focus/focus_screen.dart';
 import 'screens/history/history_screen.dart';
 import 'models/quest_model.dart';
 
+import 'screens/settings/settings_screen.dart';
+import 'screens/progress/progress_screen.dart';
+
 class AscendApp extends StatelessWidget {
   const AscendApp({super.key});
 
@@ -59,6 +62,10 @@ class AscendApp extends StatelessWidget {
               return _buildRoute(const AddQuestScreen(), settings);
             case AppRoutes.history:
               return _buildRoute(const HistoryScreen(), settings);
+            case AppRoutes.settings:
+              return _buildRoute(const SettingsScreen(), settings);
+            case AppRoutes.progress:
+              return _buildRoute(const ProgressScreen(), settings);
             case AppRoutes.focus:
               if (settings.arguments is QuestModel) {
                 return _buildRoute(FocusScreen(quest: settings.arguments as QuestModel), settings);

@@ -13,4 +13,5 @@ class AppRoutes {
   static const String dayReview = '/dayReview';
   static const String settings = '/settings';
   static const String history = '/history';
+  static const String progress = '/progress';
 }

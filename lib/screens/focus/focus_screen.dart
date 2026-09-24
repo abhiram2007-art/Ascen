@@ -93,7 +93,14 @@ class _FocusScreenState extends State<FocusScreen> with TickerProviderStateMixin
     
     if (userId != null) {
       if (widget.quest.status != QuestStatus.completed) {
-        await questProvider.completeQuest(userId, widget.quest.id);
+        final timeSpentSeconds = _totalSeconds - _secondsRemaining;
+        final timeSpentMins = timeSpentSeconds > 0 ? (timeSpentSeconds / 60).ceil() : 0;
+        await questProvider.completeQuest(
+          userId, 
+          widget.quest.id,
+          timeSpentMins: timeSpentMins,
+          notes: 'Completed via Focus Timer',
+        );
         await playerProvider.addXP(
           userId: userId,
           difficulty: widget.quest.difficulty,

@@ -1,6 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/player_provider.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({Key? key}) : super(key: key);
@@ -47,6 +50,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         return;
       }
       // Finish onboarding
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final playerProv = Provider.of<PlayerProvider>(context, listen: false);
+      if (auth.user != null) {
+        playerProv.updatePreferences(auth.user!.uid, {
+          'name': _nameController.text.trim(),
+          'categories': _selectedCategories.toList(),
+          'dailyHours': _dailyHours,
+          'preferredStartTime': _preferredStartTime,
+          'difficulty': _selectedDifficulty,
+        });
+      }
       Navigator.pushReplacementNamed(context, '/home');
       return;
     }

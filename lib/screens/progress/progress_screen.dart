@@ -32,43 +32,55 @@ class ProgressScreen extends StatelessWidget {
               style: GoogleFonts.rajdhani(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            Container(
-              height: 200,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.systemPanel,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.cyan.withValues(alpha: 0.3)),
-              ),
-              child: LineChart(
-                LineChartData(
-                  gridData: const FlGridData(show: false),
-                  titlesData: const FlTitlesData(show: false),
-                  borderData: FlBorderData(show: false),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: [
-                        const FlSpot(0, 1),
-                        const FlSpot(1, 1.5),
-                        const FlSpot(2, 1.4),
-                        const FlSpot(3, 3.4),
-                        const FlSpot(4, 2),
-                        const FlSpot(5, 2.2),
-                        const FlSpot(6, 1.8),
+            Consumer<QuestProvider>(
+              builder: (context, questProvider, _) {
+                final completedQuests = questProvider.completedQuests;
+                List<FlSpot> spots = [];
+                if (completedQuests.isEmpty) {
+                  spots = [const FlSpot(0, 0)];
+                } else {
+                  final sorted = List.of(completedQuests)
+                    ..sort((a, b) => (a.completedAt ?? DateTime.now())
+                        .compareTo(b.completedAt ?? DateTime.now()));
+                  
+                  double currentXp = 0;
+                  for (int i = 0; i < sorted.length; i++) {
+                    currentXp += sorted[i].xpReward;
+                    spots.add(FlSpot(i.toDouble(), currentXp));
+                  }
+                }
+
+                return Container(
+                  height: 200,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.systemPanel,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.cyan.withValues(alpha: 0.3)),
+                  ),
+                  child: LineChart(
+                    LineChartData(
+                      gridData: const FlGridData(show: false),
+                      titlesData: const FlTitlesData(show: false),
+                      borderData: FlBorderData(show: false),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: spots,
+                          isCurved: true,
+                          color: AppColors.cyan,
+                          barWidth: 3,
+                          isStrokeCapRound: true,
+                          dotData: const FlDotData(show: false),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: AppColors.cyan.withValues(alpha: 0.1),
+                          ),
+                        ),
                       ],
-                      isCurved: true,
-                      color: AppColors.cyan,
-                      barWidth: 3,
-                      isStrokeCapRound: true,
-                      dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: AppColors.cyan.withValues(alpha: 0.1),
-                      ),
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              }
             ),
             const SizedBox(height: 32),
             Text(
@@ -81,11 +93,11 @@ class ProgressScreen extends StatelessWidget {
                 final stats = playerProvider.user?.stats ?? {};
                 return Column(
                   children: [
-                    _buildStatBar('Strength (Fitness)', stats['str'] ?? 0, Colors.red),
-                    _buildStatBar('Intelligence (Study)', stats['int'] ?? 0, Colors.blue),
-                    _buildStatBar('Agility (Coding)', stats['agi'] ?? 0, Colors.yellow),
-                    _buildStatBar('Vitality (Health)', stats['vit'] ?? 0, Colors.green),
-                    _buildStatBar('Perception (Reading)', stats['per'] ?? 0, Colors.purple),
+                    _buildStatBar('Strength (Fitness)', stats['strength'] ?? 0, Colors.red),
+                    _buildStatBar('Intelligence (Study)', stats['intelligence'] ?? 0, Colors.blue),
+                    _buildStatBar('Agility (Coding)', stats['agility'] ?? 0, Colors.yellow),
+                    _buildStatBar('Vitality (Health)', stats['vitality'] ?? 0, Colors.green),
+                    _buildStatBar('Perception (Reading)', stats['perception'] ?? 0, Colors.purple),
                   ],
                 );
               }

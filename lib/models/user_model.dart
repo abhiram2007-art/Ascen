@@ -49,7 +49,7 @@ class UserModel {
       streak: map['streak']?.toInt() ?? 0,
       bestStreak: map['bestStreak']?.toInt() ?? 0,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      lastActiveDate: (map['lastActiveDate'] as Timestamp?)?.toDate(),
+      lastActiveDate: _parseDateTime(map['lastActiveDate']),
       preferences: map['preferences'] != null ? Map<String, dynamic>.from(map['preferences']) : {},
       stats: map['stats'] != null ? Map<String, int>.from(map['stats']) : {
         'strength': 0,
@@ -62,6 +62,13 @@ class UserModel {
       title: map['title'] ?? 'Newborn Player',
       guildId: map['guildId'],
     );
+  }
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   Map<String, dynamic> toMap() {
@@ -100,6 +107,7 @@ class UserModel {
     Map<String, int>? stats,
     int? shadowArmy,
     String? title,
+    String? guildId,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -117,6 +125,7 @@ class UserModel {
       stats: stats ?? this.stats,
       shadowArmy: shadowArmy ?? this.shadowArmy,
       title: title ?? this.title,
+      guildId: guildId ?? this.guildId,
     );
   }
 }

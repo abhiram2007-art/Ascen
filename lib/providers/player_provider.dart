@@ -145,7 +145,7 @@ class PlayerProvider extends ChangeNotifier {
       
       await FirebaseFirestore.instance.collection('users').doc(userId).update({
         'streak': newStreak,
-        'lastActiveDate': now.toIso8601String(),
+        'lastActiveDate': Timestamp.fromDate(now),
       });
       
       _user = _user!.copyWith(

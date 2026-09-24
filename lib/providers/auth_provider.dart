@@ -63,7 +63,7 @@ class AuthProvider extends ChangeNotifier {
           title: 'Newborn Player',
           shadowArmy: 0,
           createdAt: DateTime.now(),
-          stats: const {'str': 0, 'agi': 0, 'int': 0, 'vit': 0, 'per': 0},
+          stats: const {'strength': 0, 'agility': 0, 'intelligence': 0, 'vitality': 0, 'perception': 0},
           preferences: const {'notifications': true, 'dark_mode': true},
         );
 

@@ -250,7 +250,52 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    final TextEditingController emailController = TextEditingController(text: _email);
+                                    return AlertDialog(
+                                      backgroundColor: const Color(0xFF10142A),
+                                      title: Text('Reset Password', style: GoogleFonts.rajdhani(color: const Color(0xFF00D4FF))),
+                                      content: TextField(
+                                        controller: emailController,
+                                        style: const TextStyle(color: Colors.white),
+                                        decoration: InputDecoration(
+                                          hintText: 'Enter your email',
+                                          hintStyle: const TextStyle(color: Colors.white54),
+                                          enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: const Color(0xFF00D4FF).withOpacity(0.5))),
+                                          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00D4FF))),
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: Text('Cancel', style: TextStyle(color: Colors.white54)),
+                                        ),
+                                        TextButton(
+                                          onPressed: () async {
+                                            final email = emailController.text.trim();
+                                            if (email.isNotEmpty) {
+                                              await Provider.of<AuthProvider>(context, listen: false).resetPassword(email);
+                                              if (context.mounted) {
+                                                Navigator.pop(context);
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('Reset email sent successfully!'),
+                                                    backgroundColor: Colors.green,
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          },
+                                          child: Text('Reset', style: TextStyle(color: const Color(0xFF00D4FF))),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
                               child: Text(
                                 'Forgot Password?',
                                 style: GoogleFonts.inter(

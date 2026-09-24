@@ -23,6 +23,12 @@ class ProfileScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings, color: AppColors.cyan),
+            onPressed: () {
+              Navigator.pushNamed(context, '/settings');
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.logout, color: Colors.redAccent),
             onPressed: () {
               Provider.of<AuthProvider>(context, listen: false).signOut();
@@ -72,24 +78,50 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.systemPanel,
-                      side: BorderSide(color: AppColors.cyan.withOpacity(0.5)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.systemPanel,
+                            side: BorderSide(color: AppColors.cyan.withOpacity(0.5)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: const Icon(Icons.calendar_month, color: AppColors.cyan),
+                          label: Text(
+                            'HISTORY',
+                            style: GoogleFonts.orbitron(color: AppColors.cyan, fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/history');
+                          },
+                        ),
+                      ),
                     ),
-                    icon: const Icon(Icons.calendar_month, color: AppColors.cyan),
-                    label: Text(
-                      'VIEW QUEST HISTORY',
-                      style: GoogleFonts.orbitron(color: AppColors.cyan, fontWeight: FontWeight.bold),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: SizedBox(
+                        height: 50,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.systemPanel,
+                            side: BorderSide(color: AppColors.cyan.withOpacity(0.5)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: const Icon(Icons.bar_chart, color: AppColors.cyan),
+                          label: Text(
+                            'STATS',
+                            style: GoogleFonts.orbitron(color: AppColors.cyan, fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/progress');
+                          },
+                        ),
+                      ),
                     ),
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/history');
-                    },
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 32),
                 Align(

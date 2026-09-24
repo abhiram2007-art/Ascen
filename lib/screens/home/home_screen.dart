@@ -42,6 +42,20 @@ class HomeScreen extends StatelessWidget {
             final double progress = playerProvider.levelProgress;
             final rank = playerProvider.currentRank;
 
+            final completedTodayQuests = questProvider.completedQuests.where((q) {
+              if (q.completedAt == null) return false;
+              final now = DateTime.now();
+              return q.completedAt!.year == now.year && q.completedAt!.month == now.month && q.completedAt!.day == now.day;
+            }).toList();
+            
+            int totalFocusMins = 0;
+            for (var quest in completedTodayQuests) {
+              totalFocusMins += quest.timeSpentMins ?? 0;
+            }
+            final focusHours = totalFocusMins ~/ 60;
+            final focusMins = totalFocusMins % 60;
+            final focusText = '${focusHours}h ${focusMins}m';
+
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -123,7 +137,7 @@ class HomeScreen extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             _buildProgressStat('Quests', '${questProvider.completedToday}/${questProvider.totalToday}', const Color(0xFF00D4FF)),
-                            _buildProgressStat('Focus', '0h 0m', Colors.greenAccent),
+                            _buildProgressStat('Focus', focusText, Colors.greenAccent),
                           ],
                         ),
                       ],
