@@ -19,6 +19,8 @@ import 'models/quest_model.dart';
 
 import 'screens/settings/settings_screen.dart';
 import 'screens/progress/progress_screen.dart';
+import 'screens/achievements/achievements_screen.dart';
+import 'providers/achievement_provider.dart';
 
 class AscendApp extends StatelessWidget {
   const AscendApp({super.key});
@@ -40,6 +42,7 @@ class AscendApp extends StatelessWidget {
             return guild!;
           },
         ),
+        ChangeNotifierProvider(create: (_) => AchievementProvider()),
       ],
       child: MaterialApp(
         title: 'ASCEND',
@@ -66,6 +69,8 @@ class AscendApp extends StatelessWidget {
               return _buildRoute(const SettingsScreen(), settings);
             case AppRoutes.progress:
               return _buildRoute(const ProgressScreen(), settings);
+            case AppRoutes.achievements:
+              return _buildRoute(const AchievementsScreen(), settings);
             case AppRoutes.focus:
               if (settings.arguments is QuestModel) {
                 return _buildRoute(FocusScreen(quest: settings.arguments as QuestModel), settings);

@@ -74,7 +74,7 @@ class QuestProvider extends ChangeNotifier {
   /// Create a new quest
   Future<void> createQuest(String userId, QuestModel quest) async {
     try {
-      await _questService.createQuest(userId, quest);
+      await _questService.createQuest(userId, quest).timeout(const Duration(seconds: 10));
     } catch (e) {
       debugPrint('Error creating quest: $e');
       rethrow;

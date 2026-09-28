@@ -4,11 +4,44 @@ import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/player_provider.dart';
+import '../../providers/achievement_provider.dart';
 import '../../config/constants.dart';
 import '../../widgets/rank_badge.dart';
 
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAndCheckAchievements();
+    });
+  }
+
+  void _loadAndCheckAchievements() {
+    final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
+    final player = Provider.of<PlayerProvider>(context, listen: false);
+    final achievementProvider = Provider.of<AchievementProvider>(context, listen: false);
+
+    if (userId != null && player.user != null) {
+      achievementProvider.loadAchievements(userId);
+      achievementProvider.checkAchievements(
+        userId: userId,
+        totalXP: player.user!.totalXP,
+        level: player.currentLevel,
+        rank: player.currentRank.name,
+        bestStreak: player.user!.bestStreak,
+        shadowArmy: player.user!.shadowArmy,
+        guildId: player.user!.guildId,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,12 +72,18 @@ class ProfileScreen extends StatelessWidget {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        child: Consumer<PlayerProvider>(
-          builder: (context, playerProvider, _) {
+        child: Consumer2<PlayerProvider, AchievementProvider>(
+          builder: (context, playerProvider, achievementProvider, _) {
             final user = playerProvider.user;
             if (user == null) {
               return const Center(child: CircularProgressIndicator());
             }
+
+            final earned = achievementProvider.earnedAchievements;
+            // Show up to 4 recent achievements
+            final displayAchievements = earned.length > 4
+                ? earned.sublist(earned.length - 4)
+                : earned;
 
             return Column(
               children: [
@@ -64,7 +103,7 @@ class ProfileScreen extends StatelessWidget {
                 // Stat Cards
                 Row(
                   children: [
-                    Expanded(child: _buildProfileStat('Level', '${user.level}', AppColors.cyan)),
+                    Expanded(child: _buildProfileStat('Level', '${playerProvider.currentLevel}', AppColors.cyan)),
                     const SizedBox(width: 16),
                     Expanded(child: _buildProfileStat('Total XP', '${user.totalXP}', AppColors.gold)),
                   ],
@@ -86,7 +125,7 @@ class ProfileScreen extends StatelessWidget {
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.systemPanel,
-                            side: BorderSide(color: AppColors.cyan.withOpacity(0.5)),
+                            side: BorderSide(color: AppColors.cyan.withValues(alpha: 0.5)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           icon: const Icon(Icons.calendar_month, color: AppColors.cyan),
@@ -107,7 +146,7 @@ class ProfileScreen extends StatelessWidget {
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.systemPanel,
-                            side: BorderSide(color: AppColors.cyan.withOpacity(0.5)),
+                            side: BorderSide(color: AppColors.cyan.withValues(alpha: 0.5)),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           icon: const Icon(Icons.bar_chart, color: AppColors.cyan),
@@ -124,18 +163,35 @@ class ProfileScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 32),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'ACHIEVEMENTS',
-                    style: GoogleFonts.rajdhani(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+
+                // Achievements Header with VIEW ALL
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'ACHIEVEMENTS',
+                      style: GoogleFonts.rajdhani(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/achievements');
+                      },
+                      child: Text(
+                        'VIEW ALL (${earned.length}/${achievementProvider.achievements.length})',
+                        style: GoogleFonts.rajdhani(color: AppColors.gold, fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                _buildAchievementRow('First Blood', 'Completed your first daily quest.', true),
-                _buildAchievementRow('Consistency', 'Maintained a 3-day streak.', user.bestStreak >= 3),
-                _buildAchievementRow('Unbreakable', 'Maintained a 7-day streak.', user.bestStreak >= 7),
-                _buildAchievementRow('Shadow Monarch', 'Reached S-Rank.', user.rank == 'S'),
+                const SizedBox(height: 12),
+
+                // Show recent earned achievements or "No achievements yet"
+                if (displayAchievements.isEmpty)
+                  _buildAchievementRow('No Achievements Yet', 'Complete quests to unlock!', false)
+                else
+                  ...displayAchievements.map((a) =>
+                    _buildAchievementRow(a.title, a.description, true),
+                  ),
               ],
             );
           },

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../models/quest_model.dart';
 import '../providers/quest_provider.dart';
 import '../providers/player_provider.dart';
+import '../providers/achievement_provider.dart';
 import '../config/constants.dart';
 
 Future<void> showQuestCompletionDialog(
@@ -79,9 +81,9 @@ Future<void> showQuestCompletionDialog(
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.gold.withOpacity(0.1),
+                  color: AppColors.gold.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.gold.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -116,6 +118,9 @@ Future<void> showQuestCompletionDialog(
               final int? timeSpent = int.tryParse(timeController.text);
               final String notes = notesController.text.trim();
               
+              // Grab achievement provider before popping
+              final achievementProvider = Provider.of<AchievementProvider>(context, listen: false);
+              
               Navigator.pop(context);
               
               // 1. Complete the quest with notes
@@ -135,6 +140,19 @@ Future<void> showQuestCompletionDialog(
               
               // 3. Update streak
               await playerProvider.updateStreak(userId);
+
+              // 4. Check achievements after quest completion
+              if (playerProvider.user != null) {
+                await achievementProvider.checkAchievements(
+                  userId: userId,
+                  totalXP: playerProvider.user!.totalXP,
+                  level: playerProvider.currentLevel,
+                  rank: playerProvider.currentRank.name,
+                  bestStreak: playerProvider.user!.bestStreak,
+                  shadowArmy: playerProvider.user!.shadowArmy,
+                  guildId: playerProvider.user!.guildId,
+                );
+              }
             },
             child: Text(
               'CLAIM REWARD',

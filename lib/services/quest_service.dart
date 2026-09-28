@@ -161,4 +161,11 @@ class QuestService {
       return 0;
     }
   }
+
+  /// Get all completed quest documents (for focus time calculation etc.)
+  Future<QuerySnapshot> getCompletedQuestsSnapshot(String userId) async {
+    return await _questsRef(userId)
+        .where('status', isEqualTo: QuestStatus.completed.name)
+        .get();
+  }
 }
