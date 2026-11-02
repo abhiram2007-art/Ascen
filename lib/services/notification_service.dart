@@ -70,23 +70,27 @@ class NotificationService {
       return;
     }
 
-    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      'system_alerts',
-      'System Alerts',
-      channelDescription: 'Crucial notifications from the System',
-      importance: Importance.max,
-      priority: Priority.high,
-      color: Color(0xFF00D4FF),
-      ticker: 'ticker',
-    );
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+    try {
+      const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
+        'system_alerts',
+        'System Alerts',
+        channelDescription: 'Crucial notifications from the System',
+        importance: Importance.max,
+        priority: Priority.high,
+        color: Color(0xFF00D4FF),
+        ticker: 'ticker',
+      );
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    await flutterLocalNotificationsPlugin.show(
-      0,
-      title,
-      body,
-      platformChannelSpecifics,
-    );
+      await flutterLocalNotificationsPlugin.show(
+        0,
+        title,
+        body,
+        platformChannelSpecifics,
+      );
+    } catch (e) {
+      debugPrint('showSystemAlert error: $e');
+    }
   }
 
   /// Schedule daily morning and evening reminders
@@ -98,39 +102,43 @@ class NotificationService {
   }) async {
     if (kIsWeb || !_isInitialized) return;
 
-    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      'daily_quests',
-      'Daily Quests',
-      channelDescription: 'Reminders to complete daily quests',
-      importance: Importance.high,
-      priority: Priority.high,
-      color: Color(0xFF00D4FF),
-    );
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+    try {
+      const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
+        'daily_quests',
+        'Daily Quests',
+        channelDescription: 'Reminders to complete daily quests',
+        importance: Importance.high,
+        priority: Priority.high,
+        color: Color(0xFF00D4FF),
+      );
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    // Morning reminder
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      101,
-      'SYSTEM ALERT: Daily Quests Awakened',
-      'Hunter, your daily quests have reset. Begin your training early.',
-      _nextInstanceOfTime(morningHour, morningMinute),
-      platformChannelSpecifics,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+      // Morning reminder using inexactAllowWhileIdle for safe Android 12+ execution
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        101,
+        'SYSTEM ALERT: Daily Quests Awakened',
+        'Hunter, your daily quests have reset. Begin your training early.',
+        _nextInstanceOfTime(morningHour, morningMinute),
+        platformChannelSpecifics,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
 
-    // Evening reminder for pending quests
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      102,
-      'SYSTEM ALERT: Pending Quests Remaining',
-      'Player, you have incomplete objectives. Clear them before midnight to maintain your streak.',
-      _nextInstanceOfTime(eveningHour, eveningMinute),
-      platformChannelSpecifics,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+      // Evening reminder for pending quests
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        102,
+        'SYSTEM ALERT: Pending Quests Remaining',
+        'Player, you have incomplete objectives. Clear them before midnight to maintain your streak.',
+        _nextInstanceOfTime(eveningHour, eveningMinute),
+        platformChannelSpecifics,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+    } catch (e) {
+      debugPrint('scheduleDailyReminders error: $e');
+    }
   }
 
   Future<void> scheduleDailyQuestReminder() async {
@@ -146,44 +154,67 @@ class NotificationService {
   }) async {
     if (kIsWeb || !_isInitialized) return;
 
-    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      'habit_reminders',
-      'Habit Reminders',
-      channelDescription: 'Custom reminders for specific habits',
-      importance: Importance.high,
-      priority: Priority.high,
-      color: Color(0xFF00D4FF),
-    );
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+    try {
+      const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
+        'habit_reminders',
+        'Habit Reminders',
+        channelDescription: 'Custom reminders for specific habits',
+        importance: Importance.high,
+        priority: Priority.high,
+        color: Color(0xFF00D4FF),
+      );
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    await flutterLocalNotificationsPlugin.zonedSchedule(
-      id,
-      'QUEST REMINDER: $title',
-      'Time to complete your quest: $title',
-      _nextInstanceOfTime(hour, minute),
-      platformChannelSpecifics,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-    );
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        id,
+        'QUEST REMINDER: $title',
+        'Time to complete your quest: $title',
+        _nextInstanceOfTime(hour, minute),
+        platformChannelSpecifics,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+    } catch (e) {
+      debugPrint('scheduleHabitReminder error: $e');
+    }
   }
 
   Future<void> cancelReminder(int id) async {
     if (kIsWeb || !_isInitialized) return;
-    await flutterLocalNotificationsPlugin.cancel(id);
+    try {
+      await flutterLocalNotificationsPlugin.cancel(id);
+    } catch (e) {
+      debugPrint('cancelReminder error: $e');
+    }
   }
 
   Future<void> cancelAll() async {
     if (kIsWeb || !_isInitialized) return;
-    await flutterLocalNotificationsPlugin.cancelAll();
+    try {
+      await flutterLocalNotificationsPlugin.cancelAll();
+    } catch (e) {
+      debugPrint('cancelAll error: $e');
+    }
   }
 
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
-    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    try {
+      final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
+      tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+      if (scheduledDate.isBefore(now)) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
+      return scheduledDate;
+    } catch (e) {
+      debugPrint('Timezone error in _nextInstanceOfTime: $e');
+      final tz.Location utc = tz.getLocation('UTC');
+      final tz.TZDateTime now = tz.TZDateTime.now(utc);
+      tz.TZDateTime scheduledDate = tz.TZDateTime(utc, now.year, now.month, now.day, hour, minute);
+      if (scheduledDate.isBefore(now)) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
+      return scheduledDate;
     }
-    return scheduledDate;
   }
 }

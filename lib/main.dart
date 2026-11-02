@@ -10,21 +10,31 @@ import 'services/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // 1. Safely initialize Firebase
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint("Firebase initialization exception: $e");
+  }
   
+  // 2. Safely load .env
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
     debugPrint("Could not load .env file: $e");
   }
 
-  // Only init notifications on mobile (not web)
+  // 3. Safely init notifications (never block runApp)
   if (!kIsWeb) {
-    await NotificationService().init();
-    await NotificationService().requestPermissions();
-    await NotificationService().scheduleDailyQuestReminder();
+    try {
+      await NotificationService().init();
+      await NotificationService().requestPermissions();
+      await NotificationService().scheduleDailyQuestReminder();
+    } catch (e) {
+      debugPrint("Notification init/schedule error on startup: $e");
+    }
   }
   
   runApp(const AscendApp());
