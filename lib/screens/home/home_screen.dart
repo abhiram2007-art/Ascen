@@ -128,6 +128,32 @@ class HomeScreen extends StatelessWidget {
                     requiredXP: xpToNext,
                   ),
                   
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'TOTAL EXP: ${user?.totalXP ?? 0} EXP',
+                          style: GoogleFonts.rajdhani(
+                            color: const Color(0xFFFFD700),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        Text(
+                          'TO NEXT LEVEL: ${(xpToNext - currentXP).clamp(0, 99999)} XP',
+                          style: GoogleFonts.rajdhani(
+                            color: Colors.white54,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
                   const SizedBox(height: 24),
                   
                   // Stats row
@@ -287,19 +313,23 @@ class HomeScreen extends StatelessWidget {
                             }
                           },
                           onComplete: () async {
-                            if (quest.status != QuestStatus.completed && user != null) {
+                            final authUser = Provider.of<AuthProvider>(context, listen: false).user;
+                            final targetUserId = user?.id ?? authUser?.uid;
+                            if (quest.status != QuestStatus.completed && targetUserId != null) {
                               showQuestCompletionDialog(
                                 context,
                                 quest,
-                                user.id,
+                                targetUserId,
                                 questProvider,
                                 playerProvider,
                               );
                             }
                           },
                           onUncomplete: () async {
-                            if (user != null) {
-                              await questProvider.uncompleteQuest(user.id, quest.id);
+                            final authUser = Provider.of<AuthProvider>(context, listen: false).user;
+                            final targetUserId = user?.id ?? authUser?.uid;
+                            if (targetUserId != null) {
+                              await questProvider.uncompleteQuest(targetUserId, quest.id);
                             }
                           },
                           onEdit: () {
@@ -311,8 +341,10 @@ class HomeScreen extends StatelessWidget {
                             );
                           },
                           onDelete: () {
-                            if (user != null) {
-                              _confirmDelete(context, user.id, quest);
+                            final authUser = Provider.of<AuthProvider>(context, listen: false).user;
+                            final targetUserId = user?.id ?? authUser?.uid;
+                            if (targetUserId != null) {
+                              _confirmDelete(context, targetUserId, quest);
                             }
                           },
                         ),

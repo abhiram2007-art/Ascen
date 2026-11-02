@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/quest_provider.dart';
 import '../../providers/player_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/quest_model.dart';
 import '../../config/constants.dart';
 import '../../widgets/quest_card.dart';
@@ -257,19 +258,23 @@ class _QuestsScreenState extends State<QuestsScreen> {
                                 }
                               },
                               onComplete: () async {
-                                if (quest.status != QuestStatus.completed && user != null) {
+                                final authUser = Provider.of<AuthProvider>(context, listen: false).user;
+                                final targetUserId = user?.id ?? authUser?.uid;
+                                if (quest.status != QuestStatus.completed && targetUserId != null) {
                                   showQuestCompletionDialog(
                                     context,
                                     quest,
-                                    user.id,
+                                    targetUserId,
                                     questProvider,
                                     playerProvider,
                                   );
                                 }
                               },
                               onUncomplete: () async {
-                                if (user != null) {
-                                  await questProvider.uncompleteQuest(user.id, quest.id);
+                                final authUser = Provider.of<AuthProvider>(context, listen: false).user;
+                                final targetUserId = user?.id ?? authUser?.uid;
+                                if (targetUserId != null) {
+                                  await questProvider.uncompleteQuest(targetUserId, quest.id);
                                 }
                               },
                               onEdit: () {
@@ -281,8 +286,10 @@ class _QuestsScreenState extends State<QuestsScreen> {
                                 );
                               },
                               onDelete: () {
-                                if (user != null) {
-                                  _confirmDeleteQuest(context, user.id, quest);
+                                final authUser = Provider.of<AuthProvider>(context, listen: false).user;
+                                final targetUserId = user?.id ?? authUser?.uid;
+                                if (targetUserId != null) {
+                                  _confirmDeleteQuest(context, targetUserId, quest);
                                 }
                               },
                             ),

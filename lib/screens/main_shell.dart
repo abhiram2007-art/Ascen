@@ -9,7 +9,6 @@ import 'ai_coach/ai_coach_screen.dart';
 import 'profile/profile_screen.dart';
 import 'quests/quests_screen.dart';
 import 'leaderboard/leaderboard_screen.dart';
-import 'guild/guild_screen.dart';
 import '../widgets/offline_banner.dart';
 
 class MainShell extends StatefulWidget {
@@ -25,7 +24,6 @@ class _MainShellState extends State<MainShell> {
   final List<Widget> _tabs = [
     const HomeScreen(),
     const QuestsScreen(),
-    const GuildScreen(),
     const LeaderboardScreen(),
     const AiCoachScreen(),
     const ProfileScreen(),
@@ -93,11 +91,6 @@ class _MainShellState extends State<MainShell> {
             BottomNavigationBarItem(
               icon: Icon(Icons.assignment_rounded),
               label: 'Quests',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.shield_outlined),
-              activeIcon: Icon(Icons.shield),
-              label: 'Guild',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.leaderboard_outlined),

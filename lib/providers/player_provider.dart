@@ -57,9 +57,34 @@ class PlayerProvider extends ChangeNotifier {
         .collection('users')
         .doc(userId)
         .snapshots()
-        .listen((snapshot) {
+        .listen((snapshot) async {
       if (snapshot.exists && snapshot.data() != null) {
         _user = UserModel.fromMap(snapshot.data()!, snapshot.id);
+        notifyListeners();
+      } else {
+        // Auto-provision profile in Firestore if document doesn't exist
+        final newUser = UserModel(
+          id: userId,
+          name: 'Hunter',
+          email: '',
+          level: 1,
+          xp: 0,
+          totalXP: 0,
+          rank: 'E',
+          streak: 0,
+          bestStreak: 0,
+          title: 'Newborn Player',
+          shadowArmy: 0,
+          createdAt: DateTime.now(),
+          stats: const {'strength': 0, 'agility': 0, 'intelligence': 0, 'vitality': 0, 'perception': 0},
+          preferences: const {'notifications': true, 'dark_mode': true},
+        );
+        try {
+          await FirebaseFirestore.instance.collection('users').doc(userId).set(newUser.toMap(), SetOptions(merge: true));
+        } catch (e) {
+          debugPrint('Error provisioning user profile: $e');
+        }
+        _user = newUser;
         notifyListeners();
       }
     }, onError: (e) {
@@ -73,14 +98,61 @@ class PlayerProvider extends ChangeNotifier {
     required String userId,
     required QuestDifficulty difficulty,
     required String statType,
+    int? xpReward,
   }) async {
-    if (_user == null) return 0;
+    // If _user is null, ensure user profile is provisioned
+    if (_user == null) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+        if (doc.exists && doc.data() != null) {
+          _user = UserModel.fromMap(doc.data()!, doc.id);
+        } else {
+          _user = UserModel(
+            id: userId,
+            name: 'Hunter',
+            email: '',
+            level: 1,
+            xp: 0,
+            totalXP: 0,
+            rank: 'E',
+            streak: 0,
+            bestStreak: 0,
+            title: 'Newborn Player',
+            shadowArmy: 0,
+            createdAt: DateTime.now(),
+            stats: const {'strength': 0, 'agility': 0, 'intelligence': 0, 'vitality': 0, 'perception': 0},
+            preferences: const {'notifications': true, 'dark_mode': true},
+          );
+          await FirebaseFirestore.instance.collection('users').doc(userId).set(_user!.toMap(), SetOptions(merge: true));
+        }
+      } catch (e) {
+        debugPrint('Error fetching user before addXP: $e');
+        _user = UserModel(
+          id: userId,
+          name: 'Hunter',
+          email: '',
+          level: 1,
+          xp: 0,
+          totalXP: 0,
+          rank: 'E',
+          streak: 0,
+          bestStreak: 0,
+          title: 'Newborn Player',
+          shadowArmy: 0,
+          createdAt: DateTime.now(),
+          stats: const {'strength': 0, 'agility': 0, 'intelligence': 0, 'vitality': 0, 'perception': 0},
+          preferences: const {'notifications': true, 'dark_mode': true},
+        );
+      }
+    }
     
     final int oldLevel = currentLevel;
     final RankInfo oldRank = currentRank;
 
-    // 1. Calculate base XP
-    int baseXP = XPService.calculateQuestXP(difficulty);
+    // 1. Calculate base XP - honors custom xpReward or difficulty
+    int baseXP = xpReward ?? XPService.calculateQuestXP(difficulty);
+    if (baseXP <= 0) baseXP = difficulty.xpReward;
+    if (baseXP <= 0) baseXP = 50;
     
     // 2. Calculate streak bonus
     int streakBonus = XPService.calculateStreakBonus(_user!.streak);
@@ -117,26 +189,26 @@ class PlayerProvider extends ChangeNotifier {
       title: updatedTitle,
       stats: updatedStats,
     );
+    notifyListeners();
 
-    // 7. Update Firestore
+    // 7. Update Firestore with set(merge: true)
     try {
-      await FirebaseFirestore.instance.collection('users').doc(userId).update({
+      await FirebaseFirestore.instance.collection('users').doc(userId).set({
         'totalXP': newTotalXP,
         'level': updatedLevel,
         'rank': updatedRank.name,
         'title': updatedTitle,
         'stats': updatedStats,
-      });
+      }, SetOptions(merge: true));
 
       // 8. Add XP to Guild if user is in one
       if (_user!.guildId != null) {
         await GuildService().addGuildXP(_user!.guildId!, totalXPEarned);
       }
     } catch (e) {
-      debugPrint('Error adding XP to Firestore/Guild: $e');
+      debugPrint('Error updating XP in Firestore: $e');
     }
 
-    // 9. notifyListeners()
     notifyListeners();
     
     return totalXPEarned;

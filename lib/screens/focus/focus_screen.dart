@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/quest_model.dart';
 import '../../providers/player_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/quest_provider.dart';
 import '../../providers/achievement_provider.dart';
 import '../../config/constants.dart';
@@ -91,7 +92,8 @@ class _FocusScreenState extends State<FocusScreen> with TickerProviderStateMixin
     final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
     final questProvider = Provider.of<QuestProvider>(context, listen: false);
     final achievementProvider = Provider.of<AchievementProvider>(context, listen: false);
-    final userId = playerProvider.user?.id;
+    final authUser = Provider.of<AuthProvider>(context, listen: false).user;
+    final userId = playerProvider.user?.id ?? authUser?.uid;
     
     if (userId != null) {
       if (widget.quest.status != QuestStatus.completed) {
@@ -101,12 +103,12 @@ class _FocusScreenState extends State<FocusScreen> with TickerProviderStateMixin
           userId, 
           widget.quest.id,
           timeSpentMins: timeSpentMins,
-          notes: 'Completed via Focus Timer',
         );
         await playerProvider.addXP(
           userId: userId,
           difficulty: widget.quest.difficulty,
           statType: widget.quest.statType,
+          xpReward: widget.quest.xpReward,
         );
         await playerProvider.updateStreak(userId);
 
