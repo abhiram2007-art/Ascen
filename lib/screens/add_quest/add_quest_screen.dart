@@ -7,7 +7,9 @@ import '../../providers/quest_provider.dart';
 import '../../config/constants.dart';
 
 class AddQuestScreen extends StatefulWidget {
-  const AddQuestScreen({Key? key}) : super(key: key);
+  final QuestModel? initialQuest;
+
+  const AddQuestScreen({Key? key, this.initialQuest}) : super(key: key);
 
   @override
   State<AddQuestScreen> createState() => _AddQuestScreenState();
@@ -15,29 +17,47 @@ class AddQuestScreen extends StatefulWidget {
 
 class _AddQuestScreenState extends State<AddQuestScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
 
   String _selectedType = 'Daily';
   String _selectedCategory = 'Coding';
   int _selectedDifficulty = 1; // 1 to 5
   String _selectedStat = 'Strength';
   DateTime? _dueDate;
+  String? _reminderTime;
   bool _isRecurring = false;
   bool _isLoading = false;
 
   final List<String> _questTypes = ['Daily', 'Main', 'Side', 'Habit', 'Challenge'];
-  final List<String> _categories = ['Coding', 'Fitness', 'Study', 'Reading', 'Other'];
+  final List<String> _categories = ['Coding', 'Fitness', 'Study', 'Reading', 'Meditation', 'Other'];
   final List<String> _stats = ['Strength', 'Intelligence', 'Vitality', 'Agility', 'Perception'];
 
-  // Difficulty colors and XP
   final List<Map<String, dynamic>> _difficulties = [
-    {'name': 'Easy', 'color': Colors.green, 'xp': 25}, // Updated to match constants
+    {'name': 'Easy', 'color': Colors.green, 'xp': 25},
     {'name': 'Medium', 'color': const Color(0xFF00D4FF), 'xp': 50},
     {'name': 'Hard', 'color': Colors.orange, 'xp': 100},
     {'name': 'Major', 'color': Colors.purple, 'xp': 200},
     {'name': 'Challenge', 'color': Colors.red, 'xp': 500},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final q = widget.initialQuest;
+    _titleController = TextEditingController(text: q?.title ?? '');
+    _descriptionController = TextEditingController(text: q?.description ?? '');
+
+    if (q != null) {
+      _selectedType = q.type.name[0].toUpperCase() + q.type.name.substring(1);
+      _selectedCategory = _categories.contains(q.category) ? q.category : 'Other';
+      _selectedDifficulty = q.difficulty.index + 1;
+      _selectedStat = q.statType[0].toUpperCase() + q.statType.substring(1);
+      _dueDate = q.dueDate;
+      _isRecurring = q.isRecurring;
+      _reminderTime = q.reminderTime;
+    }
+  }
 
   @override
   void dispose() {
@@ -60,37 +80,54 @@ class _AddQuestScreenState extends State<AddQuestScreen> {
         
         final questProvider = Provider.of<QuestProvider>(context, listen: false);
         
-        // Find corresponding enums
         final typeEnum = QuestType.values.firstWhere(
           (e) => e.name.toLowerCase() == _selectedType.toLowerCase(), 
-          orElse: () => QuestType.daily
+          orElse: () => QuestType.daily,
         );
         
         final diffEnum = QuestDifficulty.values[_selectedDifficulty - 1];
         
-        final newQuest = QuestModel(
-          id: '', // Empty, Firestore will assign
-          title: _titleController.text.trim(),
-          description: _descriptionController.text.trim(),
-          type: typeEnum,
-          category: _selectedCategory,
-          difficulty: diffEnum,
-          statType: _selectedStat.toLowerCase(),
-          xpReward: diffEnum.xpReward,
-          createdAt: DateTime.now(),
-          dueDate: _dueDate,
-          isRecurring: _isRecurring,
-        );
-        
-        await questProvider.createQuest(userId, newQuest);
+        if (widget.initialQuest == null) {
+          // CREATE NEW QUEST
+          final newQuest = QuestModel(
+            id: '',
+            title: _titleController.text.trim(),
+            description: _descriptionController.text.trim(),
+            type: typeEnum,
+            category: _selectedCategory,
+            difficulty: diffEnum,
+            statType: _selectedStat.toLowerCase(),
+            xpReward: diffEnum.xpReward,
+            createdAt: DateTime.now(),
+            dueDate: _dueDate,
+            isRecurring: _isRecurring,
+            reminderTime: _reminderTime,
+          );
+          await questProvider.createQuest(userId, newQuest);
+        } else {
+          // UPDATE EXISTING QUEST
+          final updatedQuest = widget.initialQuest!.copyWith(
+            title: _titleController.text.trim(),
+            description: _descriptionController.text.trim(),
+            type: typeEnum,
+            category: _selectedCategory,
+            difficulty: diffEnum,
+            statType: _selectedStat.toLowerCase(),
+            xpReward: diffEnum.xpReward,
+            dueDate: _dueDate,
+            isRecurring: _isRecurring,
+            reminderTime: _reminderTime,
+          );
+          await questProvider.updateQuest(userId, updatedQuest);
+        }
         
         if (mounted) {
-          Navigator.pop(context); // Go back to home
+          Navigator.pop(context);
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error creating quest: $e'), backgroundColor: Colors.red),
+            SnackBar(content: Text('Error saving quest: $e'), backgroundColor: Colors.red),
           );
         }
       } finally {
@@ -99,21 +136,73 @@ class _AddQuestScreenState extends State<AddQuestScreen> {
     }
   }
 
+  Future<void> _confirmDelete() async {
+    if (widget.initialQuest == null) return;
+    
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.systemPanel,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: Colors.redAccent),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        title: Text(
+          'DELETE QUEST',
+          style: GoogleFonts.orbitron(color: Colors.redAccent, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to delete "${widget.initialQuest!.title}"? This cannot be undone.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('DELETE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      if (auth.user != null) {
+        await Provider.of<QuestProvider>(context, listen: false)
+            .deleteQuest(auth.user!.uid, widget.initialQuest!.id);
+        if (mounted) Navigator.pop(context);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool isEdit = widget.initialQuest != null;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0F),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'NEW QUEST',
+          isEdit ? 'EDIT QUEST' : 'NEW QUEST',
           style: GoogleFonts.orbitron(
             color: const Color(0xFF00D4FF),
             fontWeight: FontWeight.bold,
           ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          if (isEdit)
+            IconButton(
+              icon: const Icon(Icons.delete_forever, color: Colors.redAccent),
+              onPressed: _confirmDelete,
+            ),
+        ],
       ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator(color: Color(0xFF00D4FF)))
@@ -130,8 +219,8 @@ class _AddQuestScreenState extends State<AddQuestScreen> {
                         TextFormField(
                           controller: _titleController,
                           style: const TextStyle(color: Colors.white),
-                          decoration: _inputDecoration('Quest Title'),
-                          validator: (value) => value == null || value.isEmpty ? 'Title is required' : null,
+                          decoration: _inputDecoration('Quest / Habit Title'),
+                          validator: (value) => value == null || value.trim().isEmpty ? 'Title is required' : null,
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -163,13 +252,14 @@ class _AddQuestScreenState extends State<AddQuestScreen> {
                           value: _selectedStat,
                           dropdownColor: const Color(0xFF1A1A24),
                           style: const TextStyle(color: Colors.white),
-                          decoration: _inputDecoration('Stat Type'),
+                          decoration: _inputDecoration('Combat Stat Reward'),
                           items: _stats.map((stat) => DropdownMenuItem(value: stat, child: Text(stat))).toList(),
                           onChanged: (value) => setState(() => _selectedStat = value!),
                         ),
                         const SizedBox(height: 16),
                         SwitchListTile(
                           title: const Text('Recurring Daily Quest', style: TextStyle(color: Colors.white)),
+                          subtitle: const Text('Automatically resets each day', style: TextStyle(color: Colors.white54, fontSize: 12)),
                           activeColor: const Color(0xFF00D4FF),
                           value: _isRecurring,
                           onChanged: (value) => setState(() => _isRecurring = value),
@@ -180,19 +270,60 @@ class _AddQuestScreenState extends State<AddQuestScreen> {
                           contentPadding: EdgeInsets.zero,
                           title: const Text('Due Date', style: TextStyle(color: Colors.white54)),
                           subtitle: Text(
-                            _dueDate != null ? '${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}' : 'Not set',
+                            _dueDate != null 
+                              ? '${_dueDate!.year}-${_dueDate!.month.toString().padLeft(2, '0')}-${_dueDate!.day.toString().padLeft(2, '0')}' 
+                              : 'No deadline',
                             style: const TextStyle(color: Colors.white),
                           ),
-                          trailing: const Icon(Icons.calendar_today, color: Color(0xFF00D4FF)),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_dueDate != null)
+                                IconButton(
+                                  icon: const Icon(Icons.clear, color: Colors.white54, size: 20),
+                                  onPressed: () => setState(() => _dueDate = null),
+                                ),
+                              const Icon(Icons.calendar_today, color: Color(0xFF00D4FF)),
+                            ],
+                          ),
                           onTap: () async {
                             final date = await showDatePicker(
                               context: context,
                               initialDate: _dueDate ?? DateTime.now(),
-                              firstDate: DateTime.now(),
+                              firstDate: DateTime.now().subtract(const Duration(days: 30)),
                               lastDate: DateTime.now().add(const Duration(days: 365)),
                             );
                             if (date != null) {
                               setState(() => _dueDate = date);
+                            }
+                          },
+                        ),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Custom Reminder Time', style: TextStyle(color: Colors.white54)),
+                          subtitle: Text(
+                            _reminderTime != null ? _reminderTime! : 'Not set',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_reminderTime != null)
+                                IconButton(
+                                  icon: const Icon(Icons.clear, color: Colors.white54, size: 20),
+                                  onPressed: () => setState(() => _reminderTime = null),
+                                ),
+                              const Icon(Icons.access_time, color: Color(0xFF00D4FF)),
+                            ],
+                          ),
+                          onTap: () async {
+                            final time = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.now(),
+                            );
+                            if (time != null) {
+                              final formatted = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+                              setState(() => _reminderTime = formatted);
                             }
                           },
                         ),
@@ -201,7 +332,7 @@ class _AddQuestScreenState extends State<AddQuestScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'DIFFICULTY',
+                    'DIFFICULTY & RANK',
                     style: GoogleFonts.rajdhani(color: const Color(0xFF00D4FF), fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
@@ -264,7 +395,7 @@ class _AddQuestScreenState extends State<AddQuestScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     child: Text(
-                      'CREATE QUEST',
+                      isEdit ? 'UPDATE QUEST' : 'CREATE QUEST',
                       style: GoogleFonts.orbitron(color: const Color(0xFF00D4FF), fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                   ),

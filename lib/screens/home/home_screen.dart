@@ -12,6 +12,7 @@ import '../../widgets/rank_badge.dart';
 import '../../widgets/loading_shimmer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../utils/quest_dialogs.dart';
+import '../add_quest/add_quest_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -21,6 +22,35 @@ class HomeScreen extends StatelessWidget {
     if (hour < 12) return 'Good Morning';
     if (hour < 17) return 'Good Afternoon';
     return 'Good Evening';
+  }
+
+  void _confirmDelete(BuildContext context, String userId, QuestModel quest) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2C),
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: Colors.redAccent),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        title: Text('DELETE QUEST', style: GoogleFonts.orbitron(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+        content: Text('Delete "${quest.title}"?', style: const TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () {
+              Navigator.pop(context);
+              Provider.of<QuestProvider>(context, listen: false).deleteQuest(userId, quest.id);
+            },
+            child: const Text('DELETE', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -39,7 +69,6 @@ class HomeScreen extends StatelessWidget {
             final int level = playerProvider.currentLevel;
             final int currentXP = playerProvider.currentLevelXP;
             final int xpToNext = playerProvider.xpToNextLevel;
-            final double progress = playerProvider.levelProgress;
             final rank = playerProvider.currentRank;
 
             final completedTodayQuests = questProvider.completedQuests.where((q) {
@@ -55,6 +84,8 @@ class HomeScreen extends StatelessWidget {
             final focusHours = totalFocusMins ~/ 60;
             final focusMins = totalFocusMins % 60;
             final focusText = '${focusHours}h ${focusMins}m';
+
+            final int percent = questProvider.todayCompletionPercent;
 
             return SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
@@ -114,6 +145,7 @@ class HomeScreen extends StatelessWidget {
                         ],
                       ),
                       _buildStatBadge('Streak', '🔥 ${user?.streak ?? 0}', Colors.orange),
+                      _buildStatBadge('Best', '⚡ ${user?.bestStreak ?? 0}', const Color(0xFFFFD700)),
                       _buildStatBadge('Shadows', '⚔️ ${user?.shadowArmy ?? 0}', const Color(0xFF7B2FFF)),
                     ],
                   )
@@ -121,23 +153,63 @@ class HomeScreen extends StatelessWidget {
                   .fadeIn(delay: 300.ms, duration: 600.ms)
                   .slideY(begin: 0.2, end: 0, curve: Curves.easeOutBack),
                   
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
                   
-                  // Today's Progress Card
+                  // Today's Progress Card with Percentage & Breakdown
                   _buildGlassCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'TODAY',
-                          style: GoogleFonts.orbitron(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2),
-                        ),
-                        const SizedBox(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _buildProgressStat('Quests', '${questProvider.completedToday}/${questProvider.totalToday}', const Color(0xFF00D4FF)),
-                            _buildProgressStat('Focus', focusText, Colors.greenAccent),
+                            Text(
+                              'TODAY\'S OBJECTIVES',
+                              style: GoogleFonts.orbitron(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00D4FF).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFF00D4FF).withValues(alpha: 0.5)),
+                              ),
+                              child: Text(
+                                '$percent% CLEAR',
+                                style: GoogleFonts.orbitron(
+                                  color: const Color(0xFF00D4FF),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Progress bar
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            value: questProvider.todayCompletionRate,
+                            backgroundColor: Colors.white12,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              percent == 100 ? Colors.greenAccent : const Color(0xFF00D4FF),
+                            ),
+                            minHeight: 8,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildProgressStat('Completed', '${questProvider.completedToday}', Colors.greenAccent),
+                            _buildProgressStat('Remaining', '${questProvider.remainingToday}', Colors.orangeAccent),
+                            _buildProgressStat('Focus Time', focusText, const Color(0xFF00D4FF)),
                           ],
                         ),
                       ],
@@ -147,7 +219,7 @@ class HomeScreen extends StatelessWidget {
                   .fadeIn(delay: 500.ms, duration: 600.ms)
                   .slideY(begin: 0.2, end: 0, curve: Curves.easeOutBack),
                   
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
                   
                   // Daily Quests Section
                   Row(
@@ -165,22 +237,48 @@ class HomeScreen extends StatelessWidget {
                           ],
                         ),
                       ),
+                      TextButton(
+                        onPressed: () => Navigator.pushNamed(context, AppRoutes.quests),
+                        child: Text(
+                          'VIEW ALL (${questProvider.allQuests.length})',
+                          style: GoogleFonts.orbitron(color: Colors.white70, fontSize: 11),
+                        ),
+                      ),
                     ],
                   )
                   .animate()
                   .fadeIn(delay: 700.ms, duration: 600.ms),
                   
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   
                   // Quest List
                   if (questProvider.isLoading)
                     const Center(child: CircularProgressIndicator(color: Color(0xFF00D4FF)))
                   else if (questProvider.dailyQuests.isEmpty)
-                    const Center(child: Text('No daily quests found.', style: TextStyle(color: Colors.white54)))
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.assignment_turned_in_outlined, color: Colors.white38, size: 36),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'No daily quests scheduled for today.\nTap + below to create a daily quest.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white54, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    )
                   else
                     ...questProvider.dailyQuests.map((quest) {
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
+                        padding: const EdgeInsets.only(bottom: 12.0),
                         child: QuestCard(
                           quest: quest,
                           onTap: () {
@@ -199,8 +297,26 @@ class HomeScreen extends StatelessWidget {
                               );
                             }
                           },
+                          onUncomplete: () async {
+                            if (user != null) {
+                              await questProvider.uncompleteQuest(user.id, quest.id);
+                            }
+                          },
+                          onEdit: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => AddQuestScreen(initialQuest: quest),
+                              ),
+                            );
+                          },
+                          onDelete: () {
+                            if (user != null) {
+                              _confirmDelete(context, user.id, quest);
+                            }
+                          },
                         ),
-                      ).animate().fade(duration: 400.ms).slideX(begin: 0.1);
+                      );
                     }).toList(),
                 ],
               ),
@@ -226,15 +342,15 @@ class HomeScreen extends StatelessWidget {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            border: Border.all(color: color.withOpacity(0.5)),
-            borderRadius: BorderRadius.circular(12),
+            color: color.withValues(alpha: 0.1),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
             value,
-            style: GoogleFonts.orbitron(color: color, fontWeight: FontWeight.bold, fontSize: 16),
+            style: GoogleFonts.orbitron(color: color, fontWeight: FontWeight.bold, fontSize: 14),
           ),
         ),
         const SizedBox(height: 4),
@@ -247,12 +363,12 @@ class HomeScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        border: Border.all(color: const Color(0xFF00D4FF).withOpacity(0.3)),
+        color: Colors.white.withValues(alpha: 0.05),
+        border: Border.all(color: const Color(0xFF00D4FF).withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00D4FF).withOpacity(0.05),
+            color: const Color(0xFF00D4FF).withValues(alpha: 0.05),
             blurRadius: 10,
             spreadRadius: 1,
           ),
@@ -264,13 +380,12 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildProgressStat(String label, String value, Color color) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
           value,
-          style: GoogleFonts.rajdhani(color: color, fontSize: 20, fontWeight: FontWeight.bold),
+          style: GoogleFonts.orbitron(color: color, fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
       ],
     );

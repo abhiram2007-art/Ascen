@@ -20,6 +20,7 @@ class QuestModel {
   final DateTime createdAt;
   final int? timeSpentMins;
   final String? completionNotes;
+  final String? reminderTime;
 
   const QuestModel({
     required this.id,
@@ -38,6 +39,7 @@ class QuestModel {
     required this.createdAt,
     this.timeSpentMins,
     this.completionNotes,
+    this.reminderTime,
   });
 
   factory QuestModel.fromMap(Map<String, dynamic> map, String id) {
@@ -67,6 +69,7 @@ class QuestModel {
       createdAt: _parseDateTime(map['createdAt']) ?? DateTime.now(),
       timeSpentMins: map['timeSpentMins']?.toInt(),
       completionNotes: map['completionNotes'],
+      reminderTime: map['reminderTime'],
     );
   }
 
@@ -95,6 +98,7 @@ class QuestModel {
       'createdAt': Timestamp.fromDate(createdAt),
       'timeSpentMins': timeSpentMins,
       'completionNotes': completionNotes,
+      if (reminderTime != null) 'reminderTime': reminderTime,
     };
   }
 
@@ -110,11 +114,13 @@ class QuestModel {
     QuestStatus? status,
     DateTime? dueDate,
     DateTime? completedAt,
+    bool clearCompletedAt = false,
     String? goalId,
     bool? isRecurring,
     DateTime? createdAt,
     int? timeSpentMins,
     String? completionNotes,
+    String? reminderTime,
   }) {
     return QuestModel(
       id: id ?? this.id,
@@ -127,12 +133,13 @@ class QuestModel {
       difficulty: difficulty ?? this.difficulty,
       status: status ?? this.status,
       dueDate: dueDate ?? this.dueDate,
-      completedAt: completedAt ?? this.completedAt,
+      completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
       goalId: goalId ?? this.goalId,
       isRecurring: isRecurring ?? this.isRecurring,
       createdAt: createdAt ?? this.createdAt,
       timeSpentMins: timeSpentMins ?? this.timeSpentMins,
       completionNotes: completionNotes ?? this.completionNotes,
+      reminderTime: reminderTime ?? this.reminderTime,
     );
   }
 }

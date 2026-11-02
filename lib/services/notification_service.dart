@@ -11,43 +11,65 @@ class NotificationService {
   NotificationService._internal();
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  bool _isInitialized = false;
 
   Future<void> init() async {
-    // Initialize timezone
-    tz.initializeTimeZones();
+    if (kIsWeb) return;
 
-    // Android Initialization
-    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    try {
+      // Initialize timezone
+      tz.initializeTimeZones();
 
-    // iOS Initialization
-    const DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
+      // Android Initialization
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
+      // iOS Initialization
+      const DarwinInitializationSettings initializationSettingsIOS = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
 
-    await flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse notificationResponse) async {
-        // Handle notification tapped logic here
-      },
-    );
-  }
+      const InitializationSettings initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: initializationSettingsIOS,
+      );
 
-  Future<void> requestPermissions() async {
-    if (!kIsWeb && Platform.isAndroid) {
-      await flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.requestNotificationsPermission();
+      await flutterLocalNotificationsPlugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse response) async {
+          // Notification tap handler
+        },
+      );
+      _isInitialized = true;
+    } catch (e) {
+      debugPrint('Notification init error: $e');
     }
   }
 
+  Future<bool> requestPermissions() async {
+    if (kIsWeb) return false;
+
+    try {
+      if (Platform.isAndroid) {
+        final granted = await flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            ?.requestNotificationsPermission();
+        return granted ?? false;
+      }
+    } catch (e) {
+      debugPrint('Error requesting notification permissions: $e');
+    }
+    return false;
+  }
+
   Future<void> showSystemAlert({required String title, required String body}) async {
+    if (kIsWeb || !_isInitialized) {
+      debugPrint('System Alert: $title - $body');
+      return;
+    }
+
     const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
       'system_alerts',
       'System Alerts',
@@ -58,7 +80,7 @@ class NotificationService {
       ticker: 'ticker',
     );
     const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-    
+
     await flutterLocalNotificationsPlugin.show(
       0,
       title,
@@ -67,27 +89,93 @@ class NotificationService {
     );
   }
 
-  Future<void> scheduleDailyQuestReminder() async {
+  /// Schedule daily morning and evening reminders
+  Future<void> scheduleDailyReminders({
+    int morningHour = 8,
+    int morningMinute = 0,
+    int eveningHour = 20,
+    int eveningMinute = 0,
+  }) async {
+    if (kIsWeb || !_isInitialized) return;
+
     const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
       'daily_quests',
       'Daily Quests',
       channelDescription: 'Reminders to complete daily quests',
       importance: Importance.high,
       priority: Priority.high,
+      color: Color(0xFF00D4FF),
     );
     const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
 
-    // Schedule for 8 PM everyday
+    // Morning reminder
     await flutterLocalNotificationsPlugin.zonedSchedule(
-      1,
-      'SYSTEM ALERT: Pending Quests',
-      'Player, you have not completed your Daily Quests. Do not ignore the System.',
-      _nextInstanceOfTime(20, 0),
+      101,
+      'SYSTEM ALERT: Daily Quests Awakened',
+      'Hunter, your daily quests have reset. Begin your training early.',
+      _nextInstanceOfTime(morningHour, morningMinute),
       platformChannelSpecifics,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
+
+    // Evening reminder for pending quests
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      102,
+      'SYSTEM ALERT: Pending Quests Remaining',
+      'Player, you have incomplete objectives. Clear them before midnight to maintain your streak.',
+      _nextInstanceOfTime(eveningHour, eveningMinute),
+      platformChannelSpecifics,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  Future<void> scheduleDailyQuestReminder() async {
+    await scheduleDailyReminders();
+  }
+
+  /// Schedule custom reminder for an individual habit
+  Future<void> scheduleHabitReminder({
+    required int id,
+    required String title,
+    required int hour,
+    required int minute,
+  }) async {
+    if (kIsWeb || !_isInitialized) return;
+
+    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      'habit_reminders',
+      'Habit Reminders',
+      channelDescription: 'Custom reminders for specific habits',
+      importance: Importance.high,
+      priority: Priority.high,
+      color: Color(0xFF00D4FF),
+    );
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      id,
+      'QUEST REMINDER: $title',
+      'Time to complete your quest: $title',
+      _nextInstanceOfTime(hour, minute),
+      platformChannelSpecifics,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  Future<void> cancelReminder(int id) async {
+    if (kIsWeb || !_isInitialized) return;
+    await flutterLocalNotificationsPlugin.cancel(id);
+  }
+
+  Future<void> cancelAll() async {
+    if (kIsWeb || !_isInitialized) return;
+    await flutterLocalNotificationsPlugin.cancelAll();
   }
 
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {

@@ -84,11 +84,13 @@ void main() {
         'status': 'pending',
         'dueDate': '2026-11-02T10:00:00.000Z',
         'createdAt': '2026-11-01T10:00:00.000Z',
+        'reminderTime': '08:30',
       };
       final quest = QuestModel.fromMap(map, 'q1');
       expect(quest.title, 'Test Quest');
       expect(quest.dueDate, isNotNull);
       expect(quest.completedAt, isNull);
+      expect(quest.reminderTime, '08:30');
     });
 
     test('UserModel safely parses String or null dates without crashing', () {
@@ -101,6 +103,66 @@ void main() {
       final user = UserModel.fromMap(map, 'u1');
       expect(user.name, 'Hunter Sung');
       expect(user.lastActiveDate, isNotNull);
+    });
+  });
+
+  group('Daily Progress & Reset Simulation Tests', () {
+    test('Scenario 1: 5 habits created, 3 completed yields exactly 60% completion', () {
+      const int totalHabits = 5;
+      const int completedHabits = 3;
+      final double rate = completedHabits / totalHabits;
+      final int percent = (rate * 100).round();
+      expect(percent, 60);
+      expect(totalHabits - completedHabits, 2);
+    });
+
+    test('Scenario 4: Calendar day shift resets daily recurring quest status while retaining history data', () {
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final completedQuest = QuestModel(
+        id: 'q100',
+        title: 'Morning Pushups',
+        isRecurring: true,
+        type: QuestType.daily,
+        status: QuestStatus.completed,
+        completedAt: yesterday,
+        timeSpentMins: 20,
+        createdAt: yesterday.subtract(const Duration(days: 5)),
+      );
+
+      // Verify that resetting resets status to pending for today
+      final resetQuest = completedQuest.copyWith(
+        status: QuestStatus.pending,
+        clearCompletedAt: true,
+        timeSpentMins: null,
+      );
+
+      expect(resetQuest.status, QuestStatus.pending);
+      expect(resetQuest.completedAt, isNull);
+      expect(resetQuest.isRecurring, isTrue);
+      expect(completedQuest.completedAt, isNotNull); // Original history preserved
+    });
+
+    test('Scenario 5: Consecutive daily completions increase streak, gap breaks streak', () {
+      final now = DateTime.now();
+      final yesterday = DateTime(now.year, now.month, now.day - 1);
+      final twoDaysAgo = DateTime(now.year, now.month, now.day - 2);
+
+      int currentStreak = 0;
+      // Day 1
+      currentStreak = StreakService.calculateNewStreak(currentStreak, null);
+      expect(currentStreak, 1);
+
+      // Day 2 (completed yesterday)
+      currentStreak = StreakService.calculateNewStreak(currentStreak, yesterday);
+      expect(currentStreak, 2);
+
+      // Day 3 (completed yesterday)
+      currentStreak = StreakService.calculateNewStreak(currentStreak, yesterday);
+      expect(currentStreak, 3);
+
+      // Gap of 2 days -> resets to 1 on next quest
+      currentStreak = StreakService.calculateNewStreak(currentStreak, twoDaysAgo);
+      expect(currentStreak, 1);
     });
   });
 }

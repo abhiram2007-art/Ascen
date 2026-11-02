@@ -23,9 +23,91 @@ class QuestProvider extends ChangeNotifier {
   List<QuestModel> get completedQuests => _allQuests.where((q) => q.status == QuestStatus.completed).toList();
   List<QuestModel> get pendingQuests => _allQuests.where((q) => q.status == QuestStatus.pending).toList();
   bool get isLoading => _isLoading;
-  int get completedToday => _dailyQuests.where((q) => q.status == QuestStatus.completed).length;
+
+  // Daily Progress Metrics
   int get totalToday => _dailyQuests.length;
-  
+  int get completedToday => _dailyQuests.where((q) => q.status == QuestStatus.completed).length;
+  int get remainingToday => (totalToday - completedToday).clamp(0, 9999);
+  double get todayCompletionRate => totalToday > 0 ? (completedToday / totalToday) : 0.0;
+  int get todayCompletionPercent => (todayCompletionRate * 100).round();
+
+  // Overall Metrics
+  int get totalAllTime => _allQuests.length;
+  int get completedAllTime => completedQuests.length;
+  double get overallCompletionRate => totalAllTime > 0 ? (completedAllTime / totalAllTime) : 0.0;
+  int get overallCompletionPercent => (overallCompletionRate * 100).round();
+
+  // Missed Habits
+  List<QuestModel> get missedQuests {
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    return _allQuests.where((q) {
+      if (q.status == QuestStatus.completed) return false;
+      if (q.dueDate != null && q.dueDate!.isBefore(todayStart)) return true;
+      return false;
+    }).toList();
+  }
+
+  // Weekly Activity (Completions for Monday - Sunday this week)
+  Map<int, int> getWeeklyCompletions() {
+    final now = DateTime.now();
+    final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+    final Map<int, int> weekdayCounts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0};
+    
+    for (final q in completedQuests) {
+      if (q.completedAt != null) {
+        final compDate = DateTime(q.completedAt!.year, q.completedAt!.month, q.completedAt!.day);
+        if (!compDate.isBefore(monday) && compDate.difference(monday).inDays < 7) {
+          int weekday = compDate.weekday;
+          weekdayCounts[weekday] = (weekdayCounts[weekday] ?? 0) + 1;
+        }
+      }
+    }
+    return weekdayCounts;
+  }
+
+  // Monthly Activity (Completions in current month)
+  int getMonthlyCompletions() {
+    final now = DateTime.now();
+    return completedQuests.where((q) {
+      if (q.completedAt == null) return false;
+      return q.completedAt!.year == now.year && q.completedAt!.month == now.month;
+    }).length;
+  }
+
+  // Active Days this Month
+  int getMonthlyActiveDays() {
+    final now = DateTime.now();
+    final Set<int> days = {};
+    for (final q in completedQuests) {
+      if (q.completedAt != null && q.completedAt!.year == now.year && q.completedAt!.month == now.month) {
+        days.add(q.completedAt!.day);
+      }
+    }
+    return days.length;
+  }
+
+  // Habit-wise completion breakdown
+  Map<String, int> getHabitCompletionCounts() {
+    final Map<String, int> counts = {};
+    for (final q in completedQuests) {
+      counts[q.title] = (counts[q.title] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  // Best Performing Habits (sorted highest to lowest)
+  List<MapEntry<String, int>> get bestPerformingHabits {
+    final counts = getHabitCompletionCounts().entries.toList();
+    counts.sort((a, b) => b.value.compareTo(a.value));
+    return counts;
+  }
+
+  // Habits Needing Improvement (active habits with fewest completions)
+  List<QuestModel> get habitsNeedingImprovement {
+    return _allQuests.where((q) => q.status != QuestStatus.completed).toList();
+  }
+
   /// Reset daily quests and then start listening
   Future<void> initAndListen(String userId) async {
     // 1. Reset yesterday's recurring daily quests first
@@ -87,6 +169,16 @@ class QuestProvider extends ChangeNotifier {
       await _questService.completeQuest(userId, questId, timeSpentMins: timeSpentMins, notes: notes);
     } catch (e) {
       debugPrint('Error completing quest: $e');
+      rethrow;
+    }
+  }
+
+  /// Uncomplete a quest
+  Future<void> uncompleteQuest(String userId, String questId) async {
+    try {
+      await _questService.uncompleteQuest(userId, questId);
+    } catch (e) {
+      debugPrint('Error uncompleting quest: $e');
       rethrow;
     }
   }

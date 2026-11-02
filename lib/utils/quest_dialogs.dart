@@ -5,6 +5,7 @@ import '../models/quest_model.dart';
 import '../providers/quest_provider.dart';
 import '../providers/player_provider.dart';
 import '../providers/achievement_provider.dart';
+import '../services/notification_service.dart';
 import '../config/constants.dart';
 
 Future<void> showQuestCompletionDialog(
@@ -141,7 +142,24 @@ Future<void> showQuestCompletionDialog(
               // 3. Update streak
               await playerProvider.updateStreak(userId);
 
-              // 4. Check achievements after quest completion
+              // 4. Milestone Notification Check
+              final currentStreak = playerProvider.user?.streak ?? 0;
+              if (const [3, 7, 14, 30].contains(currentStreak)) {
+                NotificationService().showSystemAlert(
+                  title: 'STREAK MILESTONE REACHED! 🔥',
+                  body: 'Impressive, Player. You have maintained a $currentStreak-day streak.',
+                );
+              }
+
+              // 5. Daily Completion Check
+              if (questProvider.totalToday > 0 && questProvider.completedToday == questProvider.totalToday) {
+                NotificationService().showSystemAlert(
+                  title: 'ALL DAILY OBJECTIVES CLEARED! ⚔️',
+                  body: 'All daily quests for today are complete. Rest well, Hunter.',
+                );
+              }
+
+              // 6. Check achievements after quest completion
               if (playerProvider.user != null) {
                 await achievementProvider.checkAchievements(
                   userId: userId,

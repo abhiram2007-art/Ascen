@@ -15,6 +15,7 @@ import 'screens/main_shell.dart';
 import 'screens/add_quest/add_quest_screen.dart';
 import 'screens/focus/focus_screen.dart';
 import 'screens/history/history_screen.dart';
+import 'screens/quests/quests_screen.dart';
 import 'models/quest_model.dart';
 
 import 'screens/settings/settings_screen.dart';
@@ -62,9 +63,12 @@ class AscendApp extends StatelessWidget {
             case AppRoutes.home:
               return _buildRoute(const MainShell(), settings);
             case AppRoutes.addQuest:
-              return _buildRoute(const AddQuestScreen(), settings);
+              final quest = settings.arguments is QuestModel ? settings.arguments as QuestModel : null;
+              return _buildRoute(AddQuestScreen(initialQuest: quest), settings);
             case AppRoutes.history:
               return _buildRoute(const HistoryScreen(), settings);
+            case AppRoutes.quests:
+              return _buildRoute(const QuestsScreen(), settings);
             case AppRoutes.settings:
               return _buildRoute(const SettingsScreen(), settings);
             case AppRoutes.progress:

@@ -144,6 +144,16 @@ class QuestService {
     await _questsRef(userId).doc(questId).update(updateData);
   }
   
+  /// Uncomplete a quest (revert to pending status)
+  Future<void> uncompleteQuest(String userId, String questId) async {
+    await _questsRef(userId).doc(questId).update({
+      'status': QuestStatus.pending.name,
+      'completedAt': null,
+      'timeSpentMins': null,
+      'completionNotes': null,
+    });
+  }
+  
   /// Delete quest
   Future<void> deleteQuest(String userId, String questId) async {
     await _questsRef(userId).doc(questId).delete();
