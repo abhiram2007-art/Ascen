@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/player_provider.dart';
 import '../../providers/quest_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/quest_model.dart';
 import '../../config/routes.dart';
 import '../../widgets/quest_card.dart';
