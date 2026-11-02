@@ -30,8 +30,8 @@ class SessionModel {
       id: id,
       questId: map['questId'] ?? '',
       questTitle: map['questTitle'] ?? '',
-      startTime: (map['startTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      endTime: map['endTime'] != null ? (map['endTime'] as Timestamp).toDate() : null,
+      startTime: _parseDateTime(map['startTime']) ?? DateTime.now(),
+      endTime: _parseDateTime(map['endTime']),
       duration: map['duration']?.toInt() ?? 0,
       xpEarned: map['xpEarned']?.toInt() ?? 0,
       status: SessionStatus.values.firstWhere(
@@ -40,6 +40,14 @@ class SessionModel {
       ),
       notes: map['notes'],
     );
+  }
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   Map<String, dynamic> toMap() {

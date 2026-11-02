@@ -60,20 +60,22 @@ class QuestModel {
         (e) => e.name == map['status'],
         orElse: () => QuestStatus.pending,
       ),
-      dueDate: map['dueDate'] != null
-          ? (map['dueDate'] as Timestamp).toDate()
-          : null,
-      completedAt: map['completedAt'] != null
-          ? (map['completedAt'] as Timestamp).toDate()
-          : null,
+      dueDate: _parseDateTime(map['dueDate']),
+      completedAt: _parseDateTime(map['completedAt']),
       goalId: map['goalId'],
       isRecurring: map['isRecurring'] ?? false,
-      createdAt: map['createdAt'] != null
-          ? (map['createdAt'] as Timestamp).toDate()
-          : DateTime.now(),
-      timeSpentMins: map['timeSpentMins'],
+      createdAt: _parseDateTime(map['createdAt']) ?? DateTime.now(),
+      timeSpentMins: map['timeSpentMins']?.toInt(),
       completionNotes: map['completionNotes'],
     );
+  }
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   Map<String, dynamic> toMap() {

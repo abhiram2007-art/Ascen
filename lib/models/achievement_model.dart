@@ -31,10 +31,18 @@ class AchievementModel {
       description: map['description'] ?? '',
       iconName: map['iconName'] ?? '',
       xpReward: map['xpReward']?.toInt() ?? 0,
-      earnedAt: map['earnedAt'] != null ? (map['earnedAt'] as Timestamp).toDate() : null,
+      earnedAt: _parseDateTime(map['earnedAt']),
       isEarned: map['isEarned'] ?? false,
       requirement: map['requirement'] ?? '',
     );
+  }
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   Map<String, dynamic> toMap() {

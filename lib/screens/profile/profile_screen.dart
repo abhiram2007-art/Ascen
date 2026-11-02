@@ -88,7 +88,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             return Column(
               children: [
                 const SizedBox(height: 16),
-                RankBadge(rank: user.rank, size: 'large'),
+                RankBadge(rank: playerProvider.currentRank.name, size: 'large'),
                 const SizedBox(height: 16),
                 Text(
                   user.name,

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../models/quest_model.dart';
 import '../../providers/player_provider.dart';
 import '../../providers/quest_provider.dart';
+import '../../providers/achievement_provider.dart';
 import '../../config/constants.dart';
 
 class FocusScreen extends StatefulWidget {
@@ -89,6 +90,7 @@ class _FocusScreenState extends State<FocusScreen> with TickerProviderStateMixin
     
     final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
     final questProvider = Provider.of<QuestProvider>(context, listen: false);
+    final achievementProvider = Provider.of<AchievementProvider>(context, listen: false);
     final userId = playerProvider.user?.id;
     
     if (userId != null) {
@@ -106,6 +108,19 @@ class _FocusScreenState extends State<FocusScreen> with TickerProviderStateMixin
           difficulty: widget.quest.difficulty,
           statType: widget.quest.statType,
         );
+        await playerProvider.updateStreak(userId);
+
+        if (playerProvider.user != null) {
+          await achievementProvider.checkAchievements(
+            userId: userId,
+            totalXP: playerProvider.user!.totalXP,
+            level: playerProvider.currentLevel,
+            rank: playerProvider.currentRank.name,
+            bestStreak: playerProvider.user!.bestStreak,
+            shadowArmy: playerProvider.user!.shadowArmy,
+            guildId: playerProvider.user!.guildId,
+          );
+        }
       }
     }
     

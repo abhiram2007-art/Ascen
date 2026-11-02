@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
-import '../services/firestore_service.dart';
 import '../services/level_service.dart';
 import '../services/xp_service.dart';
 import '../services/streak_service.dart';
@@ -68,7 +67,7 @@ class PlayerProvider extends ChangeNotifier {
     });
   }
   
-  /// Add XP to user (handles level up, rank up, streak, etc.)
+  /// Add XP to user (handles level up, rank up, stats, guild XP, etc.)
   /// Returns total XP earned (including bonuses)
   Future<int> addXP({
     required String userId,
@@ -103,6 +102,8 @@ class PlayerProvider extends ChangeNotifier {
       _showRankUpAnimation = true;
       _newRank = updatedRank;
     }
+
+    String updatedTitle = LevelService.getTitle(updatedLevel);
     
     // 6. Update stat
     Map<String, int> updatedStats = Map.from(_user!.stats);
@@ -111,6 +112,9 @@ class PlayerProvider extends ChangeNotifier {
     // Update local user object optimistically
     _user = _user!.copyWith(
       totalXP: newTotalXP,
+      level: updatedLevel,
+      rank: updatedRank.name,
+      title: updatedTitle,
       stats: updatedStats,
     );
 
@@ -118,6 +122,9 @@ class PlayerProvider extends ChangeNotifier {
     try {
       await FirebaseFirestore.instance.collection('users').doc(userId).update({
         'totalXP': newTotalXP,
+        'level': updatedLevel,
+        'rank': updatedRank.name,
+        'title': updatedTitle,
         'stats': updatedStats,
       });
 
@@ -135,26 +142,70 @@ class PlayerProvider extends ChangeNotifier {
     return totalXPEarned;
   }
   
-  /// Update streak
+  /// Update streak when a quest is completed
   Future<void> updateStreak(String userId) async {
     if (_user == null) return;
     
     try {
       int newStreak = StreakService.calculateNewStreak(_user!.streak, _user!.lastActiveDate);
+      int newBestStreak = _user!.bestStreak;
+      if (newStreak > newBestStreak) {
+        newBestStreak = newStreak;
+      }
       DateTime now = DateTime.now();
       
       await FirebaseFirestore.instance.collection('users').doc(userId).update({
         'streak': newStreak,
+        'bestStreak': newBestStreak,
         'lastActiveDate': Timestamp.fromDate(now),
       });
       
       _user = _user!.copyWith(
         streak: newStreak,
+        bestStreak: newBestStreak,
         lastActiveDate: now,
       );
       notifyListeners();
     } catch (e) {
       debugPrint('Error updating streak: $e');
+    }
+  }
+
+  /// Check if streak expired due to missing a day (called on app open)
+  Future<void> checkStreakExpiry(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (!doc.exists || doc.data() == null) return;
+
+      final data = doc.data()!;
+      final currentStreak = data['streak']?.toInt() ?? 0;
+      final dynamic rawLastActive = data['lastActiveDate'];
+      
+      DateTime? lastActive;
+      if (rawLastActive is Timestamp) {
+        lastActive = rawLastActive.toDate();
+      } else if (rawLastActive is String) {
+        lastActive = DateTime.tryParse(rawLastActive);
+      }
+
+      if (lastActive != null && currentStreak > 0) {
+        final now = DateTime.now();
+        final yesterday = DateTime(now.year, now.month, now.day - 1);
+        final lastDay = DateTime(lastActive.year, lastActive.month, lastActive.day);
+
+        // If last completion was before yesterday, streak broke
+        if (lastDay.isBefore(yesterday)) {
+          await FirebaseFirestore.instance.collection('users').doc(userId).update({
+            'streak': 0,
+          });
+          if (_user != null) {
+            _user = _user!.copyWith(streak: 0);
+            notifyListeners();
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking streak expiry: $e');
     }
   }
   
@@ -191,9 +242,20 @@ class PlayerProvider extends ChangeNotifier {
   /// Update user preferences (from onboarding)
   Future<void> updatePreferences(String userId, Map<String, dynamic> prefs) async {
     try {
-      await FirebaseFirestore.instance.collection('users').doc(userId).update({
+      final Map<String, dynamic> updateData = {
         'preferences': prefs,
-      });
+      };
+      if (prefs.containsKey('name') && (prefs['name'] as String).isNotEmpty) {
+        updateData['name'] = prefs['name'];
+      }
+      await FirebaseFirestore.instance.collection('users').doc(userId).update(updateData);
+      if (prefs.containsKey('name') && _user != null) {
+        _user = _user!.copyWith(
+          name: prefs['name'],
+          preferences: prefs,
+        );
+        notifyListeners();
+      }
     } catch (e) {
       debugPrint('Error updating preferences: $e');
     }

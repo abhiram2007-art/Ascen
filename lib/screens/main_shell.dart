@@ -49,8 +49,8 @@ class _MainShellState extends State<MainShell> {
         // 2. Reset daily quests for new day, THEN start listening
         await Provider.of<QuestProvider>(context, listen: false).initAndListen(userId);
         
-        // 3. Update streak on app open
-        await Provider.of<PlayerProvider>(context, listen: false).updateStreak(userId);
+        // 3. Check streak expiry on app open (does not artificially increment)
+        await Provider.of<PlayerProvider>(context, listen: false).checkStreakExpiry(userId);
       }
     });
   }

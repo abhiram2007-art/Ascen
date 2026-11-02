@@ -2,6 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ascend/services/level_service.dart';
 import 'package:ascend/services/xp_service.dart';
 import 'package:ascend/services/streak_service.dart';
+import 'package:ascend/services/achievement_service.dart';
+import 'package:ascend/models/quest_model.dart';
+import 'package:ascend/models/user_model.dart';
 import 'package:ascend/config/constants.dart';
 
 void main() {
@@ -58,6 +61,46 @@ void main() {
 
       // Missed yesterday -> resets to 1
       expect(StreakService.calculateNewStreak(5, twoDaysAgo), 1);
+    });
+  });
+
+  group('AchievementService Tests', () {
+    test('Has exactly 20 achievements defined', () {
+      expect(AchievementService.allAchievements.length, 20);
+    });
+
+    test('All achievements have unique keys', () {
+      final keys = AchievementService.allAchievements.map((a) => a.achievementKey).toSet();
+      expect(keys.length, 20);
+    });
+  });
+
+  group('Model Date Parsing Tests', () {
+    test('QuestModel safely parses String or null dates without crashing', () {
+      final map = {
+        'title': 'Test Quest',
+        'type': 'daily',
+        'difficulty': 'easy',
+        'status': 'pending',
+        'dueDate': '2026-11-02T10:00:00.000Z',
+        'createdAt': '2026-11-01T10:00:00.000Z',
+      };
+      final quest = QuestModel.fromMap(map, 'q1');
+      expect(quest.title, 'Test Quest');
+      expect(quest.dueDate, isNotNull);
+      expect(quest.completedAt, isNull);
+    });
+
+    test('UserModel safely parses String or null dates without crashing', () {
+      final map = {
+        'name': 'Hunter Sung',
+        'email': 'hunter@solo.com',
+        'totalXP': 500,
+        'lastActiveDate': '2026-11-02T08:00:00.000Z',
+      };
+      final user = UserModel.fromMap(map, 'u1');
+      expect(user.name, 'Hunter Sung');
+      expect(user.lastActiveDate, isNotNull);
     });
   });
 }

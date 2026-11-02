@@ -65,7 +65,7 @@ class GoalModel {
       title: map['title'] ?? '',
       description: map['description'] ?? '',
       category: map['category'] ?? '',
-      targetDate: map['targetDate'] != null ? (map['targetDate'] as Timestamp).toDate() : null,
+      targetDate: _parseDateTime(map['targetDate']),
       progress: (map['progress'] ?? 0.0).toDouble(),
       milestones: (map['milestones'] as List<dynamic>?)
               ?.map((e) => Milestone.fromMap(Map<String, dynamic>.from(e)))
@@ -75,8 +75,16 @@ class GoalModel {
         (e) => e.name == map['status'],
         orElse: () => GoalStatus.active,
       ),
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: _parseDateTime(map['createdAt']) ?? DateTime.now(),
     );
+  }
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   Map<String, dynamic> toMap() {

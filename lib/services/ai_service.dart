@@ -29,10 +29,10 @@ class AiService {
     try {
       final prompt = '''
 Player Stats:
-Level: \${playerStats['level']}
-Rank: \${playerStats['rank']}
-XP: \${playerStats['xp']}
-Streak: \${playerStats['streak']}
+Level: ${playerStats['level']}
+Rank: ${playerStats['rank']}
+XP: ${playerStats['xp']}
+Streak: ${playerStats['streak']}
 
 Player Message: $userMessage
 ''';
@@ -40,7 +40,7 @@ Player Message: $userMessage
       final response = await _model.generateContent([Content.text(prompt)]);
       return response.text ?? "SYSTEM ERROR: No response generated.";
     } catch (e) {
-      return "SYSTEM ERROR: Communication failed. \$e";
+      return "SYSTEM ERROR: Communication failed. $e";
     }
   }
 }
